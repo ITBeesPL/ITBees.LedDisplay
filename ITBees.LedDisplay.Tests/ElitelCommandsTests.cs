@@ -77,7 +77,8 @@ public class ElitelCommandsTests
         Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.Color(LedColor.Off));
         Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.Brightness(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.Brightness(11));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.Font((LedFont)5));
+        // FONT accepts 0..9 (a plain Elitel board has 0..4 - checked against the board's font set when showing).
+        Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.Font((LedFont)10));
         Assert.Throws<ArgumentOutOfRangeException>(() => ElitelCommands.SetText(-1, 0, "x"));
     }
 }

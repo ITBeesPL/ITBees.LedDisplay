@@ -16,15 +16,18 @@ public sealed class EmulatedScreen
     private readonly List<EmulatedGlyph> _glyphs = new();
     private readonly LedColor[,] _pixels;
 
-    public EmulatedScreen(int width, int height)
+    /// <param name="fonts">Fonts the emulated controller has; <c>null</c> - the Elitel fonts.</param>
+    public EmulatedScreen(int width, int height, LedFontSet? fonts = null)
     {
         Width = width;
         Height = height;
+        Fonts = fonts ?? LedFontSet.Elitel;
         _pixels = new LedColor[height, width];
     }
 
     public int Width { get; }
     public int Height { get; }
+    public LedFontSet Fonts { get; }
     public LedColor Color { get; private set; } = LedColor.Red;
     public LedFont Font { get; private set; } = LedFont.Font6x8;
     public int Brightness { get; private set; } = LedBrightness.Auto;
@@ -94,7 +97,7 @@ public sealed class EmulatedScreen
                     Color = (LedColor)color;
                     return "OK";
 
-                case "FONT" when parts.Length == 2 && TryParse(parts[1], 0, 4, out var font):
+                case "FONT" when parts.Length == 2 && TryParse(parts[1], 0, 9, out var font) && Fonts.Contains((LedFont)font):
                     Font = (LedFont)font;
                     return "OK";
 
@@ -141,8 +144,8 @@ public sealed class EmulatedScreen
 
             foreach (var glyph in _glyphs)
             {
-                var cellWidth = LedFontMetrics.CellWidth(glyph.Font);
-                var cellHeight = LedFontMetrics.CellHeight(glyph.Font);
+                var cellWidth = Fonts.CellWidth(glyph.Font);
+                var cellHeight = Fonts.CellHeight(glyph.Font);
                 for (var row = glyph.Y; row < glyph.Y + cellHeight; row++)
                 {
                     for (var column = glyph.X; column < glyph.X + cellWidth; column++)
@@ -184,8 +187,8 @@ public sealed class EmulatedScreen
 
     private void DrawText(int x, int y, string text)
     {
-        var cellWidth = LedFontMetrics.CellWidth(Font);
-        var cellHeight = LedFontMetrics.CellHeight(Font);
+        var cellWidth = Fonts.CellWidth(Font);
+        var cellHeight = Fonts.CellHeight(Font);
         for (var index = 0; index < text.Length; index++)
         {
             var left = x + index * cellWidth;

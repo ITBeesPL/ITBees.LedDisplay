@@ -12,6 +12,18 @@ public class LedDisplayException : Exception
     public string DisplayId { get; }
 }
 
+/// <summary>
+/// The controller reported a restart (<c>RESET OK</c>, sent e.g. after a power cut): whatever it showed is
+/// gone. Failing the batch makes the manager forget the shown frame and send it again.
+/// </summary>
+public sealed class LedDisplayRestartedException : LedDisplayException
+{
+    public LedDisplayRestartedException(string displayId)
+        : base(displayId, $"LED display '{displayId}' restarted (it sent RESET OK) - its content will be sent again")
+    {
+    }
+}
+
 /// <summary>The board answered a command with something other than <c>OK</c>.</summary>
 public sealed class LedDisplayCommandRejectedException : LedDisplayException
 {

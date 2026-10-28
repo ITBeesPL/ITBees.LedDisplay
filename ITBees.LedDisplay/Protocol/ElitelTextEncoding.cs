@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace ITBees.LedDisplay.Protocol;
@@ -20,6 +21,46 @@ public static class ElitelTextEncoding
                                                    new EncoderReplacementFallback(ReplacementCharacter.ToString()),
                                                    DecoderFallback.ReplacementFallback)
                                                ?? throw new InvalidOperationException("Windows-1250 code page is not available");
+
+    /// <summary>ASCII with "?" for anything outside it (use <see cref="ToAscii"/> first to keep the letters).</summary>
+    public static Encoding Ascii { get; } = System.Text.Encoding.GetEncoding(
+        "us-ascii",
+        new EncoderReplacementFallback(ReplacementCharacter.ToString()),
+        DecoderFallback.ReplacementFallback);
+
+    public static Encoding ForCharset(LedTextCharset charset) => charset == LedTextCharset.Ascii ? Ascii : Encoding;
+
+    /// <summary>
+    /// Strips diacritics so a board without Polish glyphs still shows readable text: "ą" becomes "a",
+    /// "Ł" becomes "L"; other characters outside ASCII become "?".
+    /// </summary>
+    public static string ToAscii(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(text.Length);
+        foreach (var character in text.Normalize(NormalizationForm.FormD))
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            // Ł/ł are letters of their own in Unicode, not L with a mark, so they do not decompose.
+            builder.Append(character switch
+            {
+                'ł' => 'l',
+                'Ł' => 'L',
+                > '\u007f' => ReplacementCharacter,
+                _ => character,
+            });
+        }
+
+        return builder.ToString();
+    }
 
     /// <summary>
     /// Makes a text safe to put between the quotes of <c>SET</c>: a double quote would end the string

@@ -1,21 +1,39 @@
+using System.Text.RegularExpressions;
 using ITBees.LedDisplay.Protocol;
 
 namespace ITBees.LedDisplay.Rendering;
 
-/// <summary>Ready-made full-screen frames for the typical sign contents.</summary>
+/// <summary>
+/// Ready-made full-screen frames for the typical sign contents. <c>fonts</c> are the fonts of the board
+/// the frame is for (<c>null</c> - the Elitel fonts).
+/// </summary>
 public static class LedSigns
 {
     /// <summary>A text centred on the whole screen in the biggest font it fits in, word-wrapped.</summary>
-    public static LedFrame Message(int width, int height, string text, LedColor color, int? brightness = null) =>
-        new LedFrameBuilder(width, height)
+    public static LedFrame Message(int width, int height, string text, LedColor color, int? brightness = null,
+        LedFontSet? fonts = null) =>
+        new LedFrameBuilder(width, height, fonts)
             .WithColor(color)
             .WithBrightness(brightness)
             .TextBox(new LedRect(0, 0, width, height), text)
             .Build();
 
+    /// <summary>
+    /// A text on a single line, centred, in the biggest font the whole line fits in - for single-line
+    /// boards. Line breaks become spaces; a line too long even for the smallest font is cut.
+    /// </summary>
+    public static LedFrame SingleLine(int width, int height, string text, LedColor color, int? brightness = null,
+        LedFontSet? fonts = null) =>
+        new LedFrameBuilder(width, height, fonts)
+            .WithColor(color)
+            .WithBrightness(brightness)
+            .TextBox(new LedRect(0, 0, width, height), ToSingleLine(text), wrap: false)
+            .Build();
+
     /// <summary>A number (e.g. free places) centred in the biggest font it fits in, never wrapped.</summary>
-    public static LedFrame Number(int width, int height, int value, LedColor color, int? brightness = null) =>
-        new LedFrameBuilder(width, height)
+    public static LedFrame Number(int width, int height, int value, LedColor color, int? brightness = null,
+        LedFontSet? fonts = null) =>
+        new LedFrameBuilder(width, height, fonts)
             .WithColor(color)
             .WithBrightness(brightness)
             .TextBox(new LedRect(0, 0, width, height), value.ToString(), wrap: false)
@@ -36,9 +54,10 @@ public static class LedSigns
         string? caption = null,
         LedColor? captionColor = null,
         LedColor accentColor = LedColor.Off,
-        int? brightness = null)
+        int? brightness = null,
+        LedFontSet? fonts = null)
     {
-        var builder = new LedFrameBuilder(width, height)
+        var builder = new LedFrameBuilder(width, height, fonts)
             .WithColor(captionColor ?? symbolColor)
             .WithBrightness(brightness);
 
@@ -71,4 +90,7 @@ public static class LedSigns
             .TextBox(captionBox, caption)
             .Build();
     }
+
+    private static string ToSingleLine(string? text) =>
+        Regex.Replace(text ?? string.Empty, @"\s+", " ").Trim();
 }

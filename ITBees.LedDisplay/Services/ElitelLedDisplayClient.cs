@@ -20,8 +20,12 @@ public sealed class ElitelLedDisplayClient : ILedDisplayClient
 {
     private const int MaxResponseLength = 256;
 
+    /// <summary>Sent by the controller after it restarted - not an answer to the command just sent.</summary>
+    private const string RestartNotice = "RESET OK";
+
     private readonly LedDisplayOptions _options;
     private readonly ILogger _logger;
+    private readonly LedFontSet _fonts;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public ElitelLedDisplayClient(LedDisplayDefinition definition, LedDisplayOptions options, ILogger logger)
@@ -30,6 +34,7 @@ public sealed class ElitelLedDisplayClient : ILedDisplayClient
         Definition = definition;
         _options = options;
         _logger = logger;
+        _fonts = definition.GetFontSet();
     }
 
     public LedDisplayDefinition Definition { get; }
@@ -40,6 +45,13 @@ public sealed class ElitelLedDisplayClient : ILedDisplayClient
         {
             throw new ArgumentException(
                 $"Frame is {frame.Width}x{frame.Height} but LED display '{Definition.Id}' is {Definition.Width}x{Definition.Height}");
+        }
+
+        var missingFonts = frame.Texts.Select(x => x.Font).Distinct().Where(x => _fonts.Contains(x) == false).ToList();
+        if (missingFonts.Count > 0)
+        {
+            throw new ArgumentException(
+                $"Frame uses font(s) {string.Join(", ", missingFonts.Select(x => (int)x))} that LED display '{Definition.Id}' does not have ({_fonts})");
         }
 
         return ExecuteAsync(ElitelFrameCompiler.Compile(frame), cancellationToken);
@@ -73,12 +85,17 @@ public sealed class ElitelLedDisplayClient : ILedDisplayClient
                 var response = await WithTimeout(
                     async token =>
                     {
-                        await stream.WriteAsync(command.ToBytes(), token);
+                        await stream.WriteAsync(command.ToBytes(Definition.Charset), token);
                         return await reader.ReadLineAsync(token);
                     },
                     $"'{command.Line}'",
                     cancellationToken);
                 _logger.LogDebug("LED {DisplayId} RX {Response}", Definition.Id, response);
+
+                if (string.Equals(response, RestartNotice, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new LedDisplayRestartedException(Definition.Id);
+                }
 
                 if (string.Equals(response, "OK", StringComparison.OrdinalIgnoreCase) == false)
                 {
@@ -156,6 +173,11 @@ public sealed class ElitelLedDisplayClient : ILedDisplayClient
 
         if (stale.Length > 0)
         {
+            if (stale.Contains(RestartNotice, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new LedDisplayRestartedException(Definition.Id);
+            }
+
             _logger.LogWarning("LED {DisplayId} discarded unexpected input '{Stale}'", Definition.Id, stale.Trim());
         }
     }

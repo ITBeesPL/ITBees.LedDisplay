@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>ITBees.LedDisplay</PackageId>
-    <Version>8.0.1</Version>
+    <Version>8.0.3</Version>
     <Authors>ITBees</Authors>
     <Description>Driver for LED information boards and variable-message traffic signs speaking the Elitel line protocol over TCP (SET/CLEAR/COLOR/FONT/BRIGHT/PIX, Windows-1250 text). Builds frames from texts, auto-fitted text boxes, zone layouts and rasterised symbols (arrows, lane-closed cross, B-2 no-entry), keeps a registry of boards with change detection, periodic refresh, liveness probing and status events. No dependency on FAS - usable from device-side apps.</Description>
     <PackageTags>led;display;vms;variable-message-sign;parking;signage;elitel;itbees</PackageTags>

@@ -18,16 +18,24 @@ public static class LedTextLayout
     /// bigger one that would have to split a word across lines. If nothing fits, the smallest usable
     /// font is taken and the text is cut to the box (<see cref="LedTextFit.Truncated"/>). Line breaks
     /// (<c>\n</c>) in the text are always honoured; <paramref name="wrap"/> adds word wrapping.
-    /// Returns <c>null</c> when the box is smaller than a single character.
+    /// Returns <c>null</c> when the box is smaller than a single character. Uses the Elitel fonts.
     /// </summary>
-    public static LedTextFit? Fit(string text, LedRect box, LedFont maxFont, bool wrap, bool shrinkToFit)
+    public static LedTextFit? Fit(string text, LedRect box, LedFont maxFont, bool wrap, bool shrinkToFit) =>
+        Fit(text, box, LedFontSet.Elitel, maxFont, wrap, shrinkToFit);
+
+    /// <summary>
+    /// As <see cref="Fit(string, LedRect, LedFont, bool, bool)"/>, with the fonts of a given board.
+    /// <paramref name="maxFont"/> <c>null</c> - or a font the set does not have - starts from the biggest font of the set.
+    /// </summary>
+    public static LedTextFit? Fit(string text, LedRect box, LedFontSet fonts, LedFont? maxFont, bool wrap, bool shrinkToFit)
     {
+        var start = maxFont.HasValue && fonts.Contains(maxFont.Value) ? maxFont.Value : fonts.LargestFirst[0];
         var candidates = (shrinkToFit
-                ? LedFontMetrics.LargestFirst.SkipWhile(x => x != maxFont)
-                : new[] { maxFont })
+                ? fonts.LargestFirst.SkipWhile(x => x != start)
+                : new[] { start })
             .Select(font => (Font: font,
-                Columns: box.Width / LedFontMetrics.CellWidth(font),
-                Rows: box.Height / LedFontMetrics.CellHeight(font)))
+                Columns: box.Width / fonts.CellWidth(font),
+                Rows: box.Height / fonts.CellHeight(font)))
             .Where(x => x.Columns >= 1 && x.Rows >= 1)
             .ToList();
 

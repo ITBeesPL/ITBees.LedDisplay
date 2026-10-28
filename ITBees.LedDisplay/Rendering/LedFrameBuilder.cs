@@ -11,7 +11,8 @@ public sealed class LedFrameBuilder
     private LedColor _color = LedColor.White;
     private int? _brightness;
 
-    public LedFrameBuilder(int width, int height)
+    /// <param name="fonts">Fonts of the board the frame is for; <c>null</c> - the Elitel fonts.</param>
+    public LedFrameBuilder(int width, int height, LedFontSet? fonts = null)
     {
         if (width <= 0 || height <= 0)
         {
@@ -20,10 +21,12 @@ public sealed class LedFrameBuilder
 
         Width = width;
         Height = height;
+        Fonts = fonts ?? LedFontSet.Elitel;
     }
 
     public int Width { get; }
     public int Height { get; }
+    public LedFontSet Fonts { get; }
     public LedRect Bounds => new(0, 0, Width, Height);
 
     /// <summary>Colour of all texts in the frame (the controller has one current colour for the whole screen).</summary>
@@ -57,7 +60,7 @@ public sealed class LedFrameBuilder
     public LedFrameBuilder Text(int x, int y, string text, LedFont font)
     {
         var sanitized = ElitelTextEncoding.Sanitize(text);
-        var area = new LedRect(x, y, LedFontMetrics.MeasureWidth(sanitized, font), LedFontMetrics.CellHeight(font));
+        var area = new LedRect(x, y, Fonts.MeasureWidth(sanitized, font), Fonts.CellHeight(font));
         if (area.FitsIn(Width, Height) == false)
         {
             throw new ArgumentException(
@@ -74,14 +77,15 @@ public sealed class LedFrameBuilder
     }
 
     /// <summary>
-    /// Text fitted into a box: the biggest font up to <paramref name="maxFont"/> in which the whole
-    /// text fits (word-wrapped when <paramref name="wrap"/>), aligned inside the box. When even the
-    /// smallest font is too big the text is cut. The box is clipped to the display.
+    /// Text fitted into a box: the biggest font up to <paramref name="maxFont"/> (<c>null</c> - the
+    /// biggest the board has) in which the whole text fits (word-wrapped when <paramref name="wrap"/>),
+    /// aligned inside the box. When even the smallest font is too big the text is cut. The box is
+    /// clipped to the display.
     /// </summary>
     public LedFrameBuilder TextBox(
         LedRect box,
         string? text,
-        LedFont maxFont = LedFont.Font12x24,
+        LedFont? maxFont = null,
         LedHorizontalAlignment horizontal = LedHorizontalAlignment.Center,
         LedVerticalAlignment vertical = LedVerticalAlignment.Middle,
         bool wrap = true,
@@ -96,14 +100,14 @@ public sealed class LedFrameBuilder
             return this;
         }
 
-        var fit = LedTextLayout.Fit(sanitized, clipped, maxFont, wrap, shrinkToFit);
+        var fit = LedTextLayout.Fit(sanitized, clipped, Fonts, maxFont, wrap, shrinkToFit);
         if (fit == null || fit.Lines.Count == 0)
         {
             return this;
         }
 
-        var cellWidth = LedFontMetrics.CellWidth(fit.Font);
-        var cellHeight = LedFontMetrics.CellHeight(fit.Font);
+        var cellWidth = Fonts.CellWidth(fit.Font);
+        var cellHeight = Fonts.CellHeight(fit.Font);
         var blockHeight = fit.Lines.Count * cellHeight;
         var top = vertical switch
         {

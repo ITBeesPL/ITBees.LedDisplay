@@ -24,6 +24,19 @@ public sealed record LedDisplayDefinition
     public int Height { get; set; } = 32;
     public LedDisplayProtocol Protocol { get; set; } = LedDisplayProtocol.Elitel;
 
+    /// <summary>How texts go on the wire - <see cref="LedTextCharset.Ascii"/> for a controller without Polish glyphs.</summary>
+    public LedTextCharset Charset { get; set; } = LedTextCharset.Windows1250;
+
+    /// <summary>
+    /// Fonts the controller has on top of the five Elitel ones (or with other cells), e.g.
+    /// <c>"5:16x32, 6:24x32"</c> - see <see cref="LedFontSet.ParseSizes"/>. Empty for a plain Elitel board.
+    /// </summary>
+    public string? ExtraFonts { get; set; }
+
+    /// <summary>The fonts frames for this board may use - the Elitel set plus <see cref="ExtraFonts"/>.</summary>
+    public LedFontSet GetFontSet() =>
+        string.IsNullOrWhiteSpace(ExtraFonts) ? LedFontSet.Elitel : LedFontSet.Elitel.With(LedFontSet.ParseSizes(ExtraFonts));
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id))
@@ -44,6 +57,15 @@ public sealed record LedDisplayDefinition
         if (Width <= 0 || Height <= 0)
         {
             throw new ArgumentException($"LED display '{Id}' has an invalid size {Width}x{Height}");
+        }
+
+        try
+        {
+            GetFontSet();
+        }
+        catch (FormatException e)
+        {
+            throw new ArgumentException($"LED display '{Id}' has invalid extra fonts: {e.Message}", e);
         }
     }
 

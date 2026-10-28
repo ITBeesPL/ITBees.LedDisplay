@@ -24,11 +24,23 @@ public sealed class ElitelDisplayEmulator : IAsyncDisposable
     private readonly List<string> _receivedLines = new();
     private Task? _acceptLoop;
     private int _connectionCount;
+    private int _restartNoticePending;
 
-    public ElitelDisplayEmulator(int port, int width, int height)
+    /// <param name="fonts">Fonts the emulated controller has; <c>null</c> - the Elitel fonts.</param>
+    public ElitelDisplayEmulator(int port, int width, int height, LedFontSet? fonts = null)
     {
-        Screen = new EmulatedScreen(width, height);
+        Screen = new EmulatedScreen(width, height, fonts);
         _listener = new TcpListener(IPAddress.Loopback, port);
+    }
+
+    /// <summary>
+    /// Behaves like a controller after a power cut: the screen is blanked and <c>RESET OK</c> comes before
+    /// the answer to the next command.
+    /// </summary>
+    public void SimulateRestart()
+    {
+        Screen.Execute("CLEAR");
+        Volatile.Write(ref _restartNoticePending, 1);
     }
 
     public EmulatedScreen Screen { get; }
@@ -130,6 +142,11 @@ public sealed class ElitelDisplayEmulator : IAsyncDisposable
                     CommandReceived?.Invoke(line);
                     if (reply != null)
                     {
+                        if (Interlocked.Exchange(ref _restartNoticePending, 0) == 1)
+                        {
+                            reply = "RESET OK\n" + reply;
+                        }
+
                         await stream.WriteAsync(ElitelTextEncoding.Encoding.GetBytes(reply + "\n"), _stopping.Token);
                     }
                 }

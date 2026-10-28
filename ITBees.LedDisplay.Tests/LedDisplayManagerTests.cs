@@ -11,7 +11,7 @@ namespace ITBees.LedDisplay.Tests;
 
 public class LedDisplayManagerTests
 {
-    private sealed class ManualTimeProvider : TimeProvider
+    internal sealed class ManualTimeProvider : TimeProvider
     {
         private DateTimeOffset _now = new(2026, 9, 23, 8, 0, 0, TimeSpan.Zero);
 
@@ -20,7 +20,7 @@ public class LedDisplayManagerTests
         public void Advance(TimeSpan by) => _now += by;
     }
 
-    private static (LedDisplayManager Manager, ManualTimeProvider Clock) CreateManager(params LedDisplayDefinition[] displays)
+    internal static (LedDisplayManager Manager, ManualTimeProvider Clock) CreateManager(params LedDisplayDefinition[] displays)
     {
         var options = ElitelLedDisplayClientTests.FastOptions();
         options.ProbeInterval = TimeSpan.FromSeconds(60);

@@ -47,15 +47,17 @@ public static class LedLayoutRenderer
 {
     /// <summary>
     /// Draws every zone with the value found under its key (case-insensitive) or its static text.
-    /// Values that do not fit are shrunk and, as a last resort, cut - see <see cref="LedTextLayout.Fit"/>.
+    /// Values that do not fit are shrunk and, as a last resort, cut - see
+    /// <see cref="LedTextLayout.Fit(string, LedRect, LedFontSet, LedFont?, bool, bool)"/>.
     /// </summary>
-    public static LedFrame Render(LedLayout layout, IReadOnlyDictionary<string, string?>? values = null)
+    /// <param name="fonts">Fonts of the board; <c>null</c> - the Elitel fonts.</param>
+    public static LedFrame Render(LedLayout layout, IReadOnlyDictionary<string, string?>? values = null, LedFontSet? fonts = null)
     {
         var lookup = values == null
             ? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, string?>(values, StringComparer.OrdinalIgnoreCase);
 
-        var builder = new LedFrameBuilder(layout.Width, layout.Height)
+        var builder = new LedFrameBuilder(layout.Width, layout.Height, fonts)
             .WithColor(layout.Color)
             .WithBrightness(layout.Brightness);
 

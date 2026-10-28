@@ -42,6 +42,36 @@ Findings from the manufacturer's test script (`textProt-test.ptp`, Docklight):
 The protocol defines no escaping, so `"` in a text becomes `'`, `;` becomes `,`, and control
 characters (e.g. a new line) become a space. Characters outside Windows-1250 become `?`.
 
+## Boards behind an RS485 converter (DispApp)
+
+Older single-line boards (driven before by the standalone DispApp) sit behind a USR-TCP232-T2
+Ethernet–RS485 converter. Their controller speaks the same command set; measured on a real board
+(converter in TCP server mode, port **4001**, which cannot be changed to 3000):
+
+- every command is answered with `OK\r\n` within ~25 ms, whether the line ends with CR, LF or CRLF -
+  the library's `\n` and its per-command `OK` handshake work as they are,
+- `FONT;0` .. `FONT;9` are accepted (five fonts more than Elitel); `FONT;10` and unknown commands get
+  no answer at all (the library times out),
+- after a power cut the controller sends `RESET OK`; the client fails the batch with
+  `LedDisplayRestartedException`, so the manager forgets the shown frame and sends it again,
+- the converter accepts a fresh connection per batch; do not run DispApp against the same board at the
+  same time - both would draw on it (and the converter may not take a second client).
+
+For such a board set on the `LedDisplayDefinition`:
+
+```json
+{ "Id": "street", "Host": "192.168.104.135", "Port": 4001, "Width": 96, "Height": 32,
+  "Charset": "Ascii", "ExtraFonts": "6:16x32" }
+```
+
+- `Charset: Ascii` - for a controller without Polish glyphs: "ZAMKNIĘTY" is sent as "ZAMKNIETY",
+- `ExtraFonts` - cells of the fonts beyond 0..4 (`"font:width x height"`, comma separated); frames
+  are fitted with `definition.GetFontSet()` passed to `LedSigns`/`LedFrameBuilder`/`LedLayoutRenderer`,
+  and the client refuses a frame using a font the board does not have,
+- `LedSigns.SingleLine(...)` keeps a text on one line in the biggest font it fits in.
+
+The sizes of fonts 5..9 are not documented by the vendor - measure them on the board before listing them.
+
 ## Quick start
 
 `appsettings.json`:
